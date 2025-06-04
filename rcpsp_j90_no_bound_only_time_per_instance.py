@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-RCPSP solver that processes all .data files from j_no_bound directory and outputs results to CSV.
+RCPSP solver that processes .data files from data directory within a specified range and outputs results to CSV.
 Each instance gets a fixed time limit and solves without using any provided bounds.
 
 Usage:
-    python rcpsp_j_no_bound_only_time_per_instance.py
+    python rcpsp_j90_no_bound_only_time_per_instance.py
 
 This script:
-1. Finds all .data files in the Convert/data/j_no_bound directory
+1. Finds all .data files in the data directory within the specified range
 2. Solves each RCPSP instance using the CP Optimizer with a fixed time limit per instance
 3. Does NOT use any provided optimal bounds (minimizes makespan freely)
-4. Records results in result/j_no_bound.csv with columns:
+4. Records results in result/j90_no_bound_1200s.csv with columns:
    - file name (just the filename, not the path)
    - Model constraint (makespan found)
    - Status (optimal/feasible/unknown)
@@ -24,6 +24,7 @@ import time
 from pathlib import Path
 from google.cloud import storage
 import os
+
 
 def solve_rcpsp(data_file):
     """
@@ -121,7 +122,7 @@ def solve_rcpsp(data_file):
 
 
 def main():
-    # Define directories - note the change to j90_no_bound
+    # Define directories
     data_dir = Path("data")
     result_dir = Path("result")
     output_file = result_dir / "j90_no_bound_1200s.csv"
@@ -129,9 +130,13 @@ def main():
     # Create result directory if it doesn't exist
     os.makedirs(result_dir, exist_ok=True)
 
+    # Define the range of files to process
+    start_file = "j905_9.data"  # File bắt đầu
+    end_file = "j909_9.data"  # File kết thúc (bạn có thể thay đổi tên file này)
+
     # Find all .data files in the data directory
-    data_files = list(data_dir.glob("*.data"))
-    if not data_files:
+    all_data_files = list(data_dir.glob("*.data"))
+    if not all_data_files:
         print(f"Warning: No .data files found in {data_dir}")
         print(f"Current directory: {os.getcwd()}")
         print("Directory contents:")
@@ -139,7 +144,36 @@ def main():
             print(f"  {item}")
         return
 
-    print(f"Found {len(data_files)} .data files to process")
+    # Sort files to ensure consistent order
+    all_data_files.sort()
+
+    # Find the indices of start and end files
+    start_index = None
+    end_index = None
+
+    for i, file_path in enumerate(all_data_files):
+        if file_path.name == start_file:
+            start_index = i
+        if file_path.name == end_file:
+            end_index = i
+
+    if start_index is None:
+        print(f"Error: Starting file {start_file} not found in data directory")
+        return
+
+    if end_index is None:
+        print(f"Error: Ending file {end_file} not found in data directory")
+        return
+
+    if start_index > end_index:
+        print(f"Error: Starting file {start_file} comes after ending file {end_file}")
+        return
+
+    # Get files from start_file to end_file (inclusive)
+    data_files = all_data_files[start_index:end_index + 1]
+
+    print(f"Found {len(all_data_files)} total .data files")
+    print(f"Processing {len(data_files)} files from {start_file} to {end_file}")
     print(f"Using {1200} seconds time limit per instance")
     print("Solving WITHOUT using any provided bounds")
 
